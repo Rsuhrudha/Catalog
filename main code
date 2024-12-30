@@ -1,0 +1,116 @@
+import org.json.JSONObject;
+
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.IOException;
+
+public class SecretSharing {
+
+
+    public static long decodeValue(int base, String value) {
+        return Long.parseLong(value, base);
+    }
+
+    
+    public static long lagrangeInterpolation(long[][] points) {
+        int n = points.length;
+        double c = 0.0; // This will hold the constant term as a double for precise division
+
+        for (int i = 0; i < n; i++) {
+            double xi = points[i][0];
+            double yi = points[i][1];
+            double li = 1.0; // Lagrange basis polynomial
+
+            for (int j = 0; j < n; j++) {
+                if (i != j) {
+                    li *= (0 - points[j][0]) / (xi - points[j][0]);
+                }
+            }
+
+            c += li * yi;
+        }
+
+        return Math.round(c); // Return the constant term rounded to the nearest integer
+    }
+
+    
+    public static long findSecret(String jsonInput) {
+        JSONObject jsonObject = new JSONObject(jsonInput);
+        JSONObject keys = jsonObject.getJSONObject("keys");
+        int n = keys.getInt("n");
+        int k = keys.getInt("k");
+
+        if (n < k) {
+            throw new IllegalArgumentException("Insufficient points to solve the polynomial.");
+        }
+
+    
+        long[][] points = new long[k][2];
+
+   
+        int index = 0;
+        for (int i = 1; i <= n && index < k; i++) {
+            if (!jsonObject.has(String.valueOf(i))) continue; // Skip if the key is missing
+            JSONObject entry = jsonObject.getJSONObject(String.valueOf(i));
+            int base = entry.getInt("base");
+            String value = entry.getString("value");
+            long x = i; // x is the key
+            long y = decodeValue(base, value); // Decode y value
+            points[index][0] = x;
+            points[index][1] = y;
+            index++;
+        }
+
+        if (index < k) {
+            throw new IllegalArgumentException("Not enough valid points for interpolation.");
+        }
+
+      
+        return lagrangeInterpolation(points);
+    }
+
+    public static void main(String[] args) {
+        // Read JSON input from files
+        String input1Path = "input1.json"; // Path to input1.json
+        String input2Path = "input2.json"; // Path to input2.json
+
+        StringBuilder jsonInput1 = new StringBuilder();
+        StringBuilder jsonInput2 = new StringBuilder();
+
+ 
+        try (BufferedReader br = new BufferedReader(new FileReader(input1Path))) {
+            String line;
+            while ((line = br.readLine()) != null) {
+                jsonInput1.append(line);
+            }
+        } catch (IOException e) {
+            System.err.println("Error reading file: " + input1Path);
+            e.printStackTrace();
+        }
+
+   
+        try (BufferedReader br = new BufferedReader(new FileReader(input2Path))) {
+            String line;
+            while ((line = br.readLine()) != null) {
+                jsonInput2.append(line);
+            }
+        } catch (IOException e) {
+            System.err.println("Error reading file: " + input2Path);
+            e.printStackTrace();
+        }
+
+      
+        try {
+            long secret1 = findSecret(jsonInput1.toString());
+            long secret2 = findSecret(jsonInput2.toString());
+
+            // Output the results
+            System.out.println("Secret for Input 1: " + secret1);
+            System.out.println("Secret for Input 2: " + secret2);
+        } catch (Exception e) {
+            System.err.println("Error calculating secrets: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+}
+//this code considers json file named input1 and input2 ,then prints c values respectively 
